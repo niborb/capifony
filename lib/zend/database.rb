@@ -12,7 +12,7 @@ namespace :database do
       config    = ""
 
       data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_config_file}")
-      config = load_database_config data, symfony_env_prod
+      config = load_database_config data, zend_env_prod
 
       case config['database_driver']
       when "pdo_mysql", "mysql"
@@ -43,7 +43,7 @@ namespace :database do
       filename  = "#{application}.local_dump.#{Time.now.utc.strftime("%Y%m%d%H%M%S")}.sql.gz"
       tmpfile   = "#{backup_path}/#{application}_dump_tmp.sql"
       file      = "#{backup_path}/#{filename}"
-      config    = load_database_config IO.read("#{app_config_path}/#{app_config_file}"), symfony_env_local
+      config    = load_database_config IO.read("#{app_config_path}/#{app_config_file}"), zend_env_local
       sqlfile   = "#{application}_dump.sql"
 
       FileUtils::mkdir_p("#{backup_path}")
@@ -77,7 +77,7 @@ namespace :database do
     task :to_local, :roles => :db, :only => { :primary => true } do
       env       = fetch(:deploy_env, "remote")
       filename  = "#{application}.#{env}_dump.latest.sql.gz"
-      config    = load_database_config IO.read("#{app_config_path}/#{app_config_file}"), symfony_env_local
+      config    = load_database_config IO.read("#{app_config_path}/#{app_config_file}"), zend_env_local
       sqlfile   = "#{application}_dump.sql"
 
       database.dump.remote
@@ -109,7 +109,7 @@ namespace :database do
       run "#{try_sudo} gunzip -c #{remote_tmp_dir}/#{filename} > #{remote_tmp_dir}/#{sqlfile}"
 
       data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_config_file}")
-      config = load_database_config data, symfony_env_prod
+      config = load_database_config data, zend_env_prod
 
       case config['database_driver']
       when "pdo_mysql", "mysql"

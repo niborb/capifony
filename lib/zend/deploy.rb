@@ -1,8 +1,7 @@
 # Overrided Capistrano tasks
 namespace :deploy do
   desc <<-DESC
-    Sets permissions for writable_dirs folders as described in the Symfony documentation
-    (http://symfony.com/doc/master/book/installation.html#configuration-and-setup)
+    Sets permissions for writable_dirs folders 
   DESC
   task :set_permissions, :roles => :app, :except => { :no_release => true } do
     if writable_dirs && permission_method
@@ -102,20 +101,6 @@ namespace :deploy do
     capifony_puts_ok
 
     share_childs
-
-    if fetch(:normalize_asset_timestamps, true)
-      stamp = Time.now.utc.strftime("%Y%m%d%H%M.%S")
-      asset_paths = asset_children.map { |p| "#{latest_release}/#{p}" }.join(" ")
-
-      if asset_paths.chomp.empty?
-        puts "    No asset paths found, skipped".yellow
-      else
-        capifony_pretty_print "--> Normalizing asset timestamps"
-
-        run "#{try_sudo} find #{asset_paths} -exec touch -t #{stamp} {} ';' &> /dev/null || true", :env => { "TZ" => "UTC" }
-        capifony_puts_ok
-      end
-    end
   end
 
   desc <<-DESC
@@ -134,14 +119,12 @@ namespace :deploy do
     run "#{try_sudo} sh -c 'cd #{latest_release} && phpunit -c #{app_path} src'"
   end
 
-  desc "Runs the Symfony2 migrations"
+  desc "Runs the Zend Doctrine2 migrations"
   task :migrate, :roles => :app, :except => { :no_release => true }, :only => { :primary => true } do
     if model_manager == "doctrine"
-      symfony.doctrine.migrations.migrate
+      zend.doctrine.migrations.migrate
     else
-      if model_manager == "propel"
-        puts "    Propel doesn't have built-in migration for now".yellow
-      end
+      # todo also support doctrine 1?
     end
   end
 

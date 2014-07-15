@@ -3,8 +3,8 @@
 require 'optparse'
 require 'fileutils'
 
-symfony_version  = nil
-symfony_app_path = 'app'
+zend_version  = nil
+zend_app_path = 'app'
 capifony_version = '2.7.1.dev'
 
 OptionParser.new do |opts|
@@ -20,12 +20,8 @@ OptionParser.new do |opts|
     exit 0
   end
 
-  opts.on("-s", "--symfony VERSION", "Capify specific symfony version (1|2)") do |version|
-    symfony_version = version.to_i
-  end
-
   opts.on("-p", "--app NAME", "Specify app name (folder) to capify") do |path|
-    symfony_app_path = path
+    zend_app_path = path
   end
 
   begin
@@ -53,63 +49,60 @@ def unindent(string)
 end
 
 base = ARGV.shift
-symfony_version = symfony_version || ((File.directory? File.join(base, 'config')) ? 1 : 2)
 
-if symfony_version == 2
-  files = {
-    "Capfile" => unindent(<<-FILE),
-      load 'deploy' if respond_to?(:namespace) # cap2 differentiator
+files = {
+  "Capfile" => unindent(<<-FILE),
+    load 'deploy' if respond_to?(:namespace) # cap2 differentiator
 
-      require 'capifony_symfony2'
-      load '#{symfony_app_path}/config/deploy'
-    FILE
+    require 'capifony_zend'
+    load '#{zend_app_path}/config/deploy'
+  FILE
 
-    "#{symfony_app_path}/config/deploy.rb" => unindent(<<-FILE)
-      set :application, "set your application name here"
-      set :domain,      "\#{application}.com"
-      set :deploy_to,   "/var/www/\#{domain}"
-      set :app_path,    "#{symfony_app_path}"
+  "#{zend_app_path}/config/deploy.rb" => unindent(<<-FILE),
+    set :stages,        %w(production accept testing)
+    set :default_stage, "testing"
+    set :stage_dir,     "app/config"
+    require 'capistrano/ext/multistage'
 
-      set :repository,  "\#{domain}:/var/repos/\#{application}.git"
-      set :scm,         :git
-      # Or: `accurev`, `bzr`, `cvs`, `darcs`, `subversion`, `mercurial`, `perforce`, or `none`
 
-      set :model_manager, "doctrine"
-      # Or: `propel`
+    set :application, "set your application name here"
+    set :domain,      "\#{application}.com"
+    set :deploy_to,   "/var/www/\#{domain}"
+    set :app_path,    "#{zend_app_path}"
 
-      role :web,        domain                         # Your HTTP server, Apache/etc
-      role :app,        domain, :primary => true       # This may be the same as your `Web` server
+    set :repository,  "https://svn..."
+    set :scm,         :subversion
+    #set :user, "capistrano"
+    set :use_sudo, false
+    set :deploy_via, :copy
 
-      set  :keep_releases,  3
+    # PHP binary to execute
+    #set :php_bin,           "php"
 
-      # Be more verbose by uncommenting the following line
-      # logger.level = Logger::MAX_LEVEL
-    FILE
-  }
-else
-  files = {
-    "Capfile" => unindent(<<-FILE),
-      load 'deploy' if respond_to?(:namespace) # cap2 differentiator
-      Dir['plugins/*/lib/recipes/*.rb'].each { |plugin| load(plugin) }
+    set :model_manager, "doctrine"
 
-      load Gem.find_files('capifony_symfony1.rb').first.to_s
-      load 'config/deploy'
-    FILE
+    set  :keep_releases,  3
 
-    "config/deploy.rb" => 'set :application, "set your application name here"
-set :domain,      "#{application}.com"
-set :deploy_to,   "/var/www/#{domain}"
+    # Be more verbose by uncommenting the following line
+    logger.level = Logger::MAX_LEVEL
+  FILE
 
-set :repository,  "#{domain}:/var/repos/#{application}.git"
-set :scm,         :git
-# Or: `accurev`, `bzr`, `cvs`, `darcs`, `subversion`, `mercurial`, `perforce`, or `none`
+  "#{zend_app_path}/config/production.rb" => unindent(<<-FILE),
+      server 'production.server.com', :app, :web, :primary => true
+      set :application_env, 'production'
+  FILE
 
-role :web,        domain                         # Your HTTP server, Apache/etc
-role :app,        domain, :primary => true       # This may be the same as your `Web` server
+  "#{zend_app_path}/config/accept.rb" => unindent(<<-FILE),
+      server 'accept.server.com', :app, :web, :primary => true
+      set :application_env, 'accept'
+  FILE
 
-set  :keep_releases,  3'
-  }
-end
+  "#{zend_app_path}/config/testing.rb" => unindent(<<-FILE),
+      server 'test.server.com', :app, :web, :primary => true
+      set :application_env, 'test'
+  FILE
+
+}
 
 files.each do |file, content|
   file = File.join(base, file)
@@ -127,4 +120,4 @@ files.each do |file, content|
   end
 end
 
-puts "[done] symfony #{symfony_version.to_s} project capifonied!"
+puts "[done] zend #{zend_version.to_s} project capifonied!"

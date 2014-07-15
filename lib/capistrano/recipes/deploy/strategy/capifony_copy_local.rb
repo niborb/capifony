@@ -1,6 +1,6 @@
 require 'capistrano/recipes/deploy/strategy/copy'
 require 'fileutils'
-require 'capifony_symfony2'
+require 'capifony_zend'
 
 module Capistrano
   module Deploy
@@ -12,8 +12,8 @@ module Capistrano
           copy_cache ? run_copy_cache_strategy : run_copy_strategy
           create_revision_file
           $temp_destination = destination  # Make temp location avaliable globally.
-          symfony.composer.install
-          symfony.bootstrap.build
+          zend.composer.install
+          zend.bootstrap.build
           compress_repository
           distribute!
         ensure

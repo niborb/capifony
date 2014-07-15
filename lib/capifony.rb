@@ -1,8 +1,8 @@
-# Symfony environment on local
-set :symfony_env_local, "dev"
+# Zend environment on local
+set :zend_env_local, "development"
 
-# Symfony environment
-set :symfony_env_prod,  "prod"
+# Zend environment
+set :zend_env_prod,  "production"
 
 # PHP binary to execute
 set :php_bin,           "php"
