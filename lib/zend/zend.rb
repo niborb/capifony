@@ -78,11 +78,11 @@ namespace :zend do
       if use_composer_tmp
         logger.debug "Installing composer dependencies to #{$temp_destination}"
         capifony_pretty_print "--> Installing Composer dependencies in temp location"
-        run_locally "cd #{$temp_destination} && APPLICATION_ENV=#{zend_env_prod} #{composer_bin} install #{options}"
+        run_locally "cd #{$temp_destination} && APPLICATION_ENV=#{application_env} #{composer_bin} install #{options}"
         capifony_puts_ok
       else
         capifony_pretty_print "--> Installing Composer dependencies"
-        run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{zend_env_prod} #{composer_bin} install #{options}'"
+        run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{application_env} #{composer_bin} install #{options}'"
         capifony_puts_ok
       end
     end
@@ -100,7 +100,7 @@ namespace :zend do
       end
 
       capifony_pretty_print "--> Updating Composer dependencies"
-      run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{zend_env_prod} #{composer_bin} update #{options}'"
+      run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{application_env} #{composer_bin} update #{options}'"
       capifony_puts_ok
     end
 

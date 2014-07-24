@@ -49,7 +49,7 @@ namespace :zend do
       task :drop, :roles => :app, :except => { :no_release => true } do
         capifony_pretty_print "--> Dropping databases"
 
-        if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to drop #{zend_env_prod}'s database? (y/N)")
+        if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to drop #{application_env}'s database? (y/N)")
           run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{application_env}  #{php_bin} #{zend_console} doctrine:database:drop --force #{console_options}'", :once => true
         end
         capifony_puts_ok
@@ -77,7 +77,7 @@ namespace :zend do
       task :drop, :roles => :app, :except => { :no_release => true } do
         capifony_pretty_print "--> Droping schema"
 
-        if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to drop #{zend_env_prod}'s database schema? (y/N)")
+        if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to drop #{application_env}'s database schema? (y/N)")
           run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{application_env}  #{php_bin} #{zend_console} doctrine:schema:drop --force #{console_options}#{doctrine_em_flag}'", :once => true
         end
         capifony_puts_ok
@@ -119,12 +119,12 @@ namespace :zend do
         logger.info "    Current database version: #{currentVersion}"
 
         on_rollback {
-          if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to migrate #{zend_env_prod}'s database back to version #{currentVersion}? (y/N)")
+          if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to migrate #{application_env}'s database back to version #{currentVersion}? (y/N)")
             run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{application_env}  #{php_bin} #{zend_console} doctrine:migrations:migrate #{currentVersion} #{console_options} --no-interaction#{doctrine_em_flag}'", :once => true
           end
         }
 
-        if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to migrate #{zend_env_prod}'s database? (y/N)")
+        if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to migrate #{application_env}'s database? (y/N)")
           run "#{try_sudo} sh -c ' cd #{latest_release} && APPLICATION_ENV=#{application_env}  #{php_bin} #{zend_console} doctrine:migrations:migrate #{console_options} --no-interaction#{doctrine_em_flag}'", :once => true
         end
       end

@@ -34,6 +34,8 @@ module Capifony
         # Zend log path
         set :log_path,              app_path + "/var/logs"
 
+        set :log_file,              "application.log"
+
         # Zend cache path
         set :cache_path,            app_path + "/var/cache"
 
@@ -41,7 +43,7 @@ module Capifony
         set :app_config_path,       app_path + "/application/configs"
 
         # Zend config file (parameters.(ini|yml|etc...)
-        set :app_config_file,       app_path + "/application/configs/application.dist.ini"
+        set :app_config_files, {app_path + '/application/configs/application.dist.ini' => app_path + '/application/configs/application.ini'}
 
         # Whether to use composer to install vendors.
         # If set to false, it will use the bin/vendors script
@@ -241,6 +243,19 @@ module Capifony
             # Set permissions after all cache files have been created
             zend.deploy.set_permissions
           end
+
+          app_config_files.each do |origin_file, destination_file|
+
+            # if origin_file && File.exists?(origin_file)
+            origin_file = latest_release + "/" + origin_file
+            destination_file = latest_release + "/" + destination_file
+            puts "\t --> Copying file #{origin_file} to #{destination_file}".green
+
+            run "cp #{origin_file} #{destination_file}"
+            #end
+
+          end
+
         end
 
         before "deploy:update_code" do

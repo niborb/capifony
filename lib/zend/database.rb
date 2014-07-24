@@ -12,7 +12,7 @@ namespace :database do
       config    = ""
 
       data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_config_file}")
-      config = load_database_config data, zend_env_prod
+      config = load_database_config data, application_env
 
       case config['database_driver']
       when "pdo_mysql", "mysql"
@@ -109,7 +109,7 @@ namespace :database do
       run "#{try_sudo} gunzip -c #{remote_tmp_dir}/#{filename} > #{remote_tmp_dir}/#{sqlfile}"
 
       data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_config_file}")
-      config = load_database_config data, zend_env_prod
+      config = load_database_config data, application_env
 
       case config['database_driver']
       when "pdo_mysql", "mysql"
