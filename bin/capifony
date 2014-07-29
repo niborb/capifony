@@ -70,7 +70,11 @@ files = {
     set :deploy_to,   "/var/www/\#{domain}"
     set :app_path,    "#{zend_app_path}"
 
-    set :repository,  "https://svn..."
+
+    set :repository_root,  "https://svn.../"
+    set(:tag) { Capistrano::CLI.ui.ask("Tag to use for deployment  ") }
+    set(:repository) { (tag == "trunk") ? "#{repository_root}/trunk" : "#{repository_root}/tags/#{tag}" }
+
     set :scm,         :subversion
     #set :user, "capistrano"
     set :use_sudo, false
