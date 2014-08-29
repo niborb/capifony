@@ -121,10 +121,10 @@ namespace :deploy do
 
   desc "Runs the Zend Doctrine2 migrations"
   task :migrate, :roles => :app, :except => { :no_release => true }, :only => { :primary => true } do
-    if model_manager == "doctrine"
-      zend.doctrine.migrations.migrate
-    else
-      # todo also support doctrine 1?
+    if model_manager == "doctrine2"
+      zend.doctrine2.migrations.migrate
+    elsif model_manager == "doctrine1"
+      zend.doctrine1.migrations.migrate
     end
   end
 

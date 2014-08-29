@@ -18,7 +18,8 @@ module Capifony
         load 'zend/zend'
         load 'zend/database'
         load 'zend/deploy'
-        load 'zend/doctrine'
+        load 'zend/doctrine1'
+        load 'zend/doctrine2'
         load 'zend/web'
         load 'zend/shared'
 
