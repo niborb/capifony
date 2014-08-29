@@ -11,17 +11,14 @@ namespace :database do
       sqlfile   = "#{application}_dump.sql"
       config    = ""
 
-      data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_config_file}")
+      data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_db_config_file}")
       config = load_database_config data, application_env
 
-      case config['database_driver']
-      when "pdo_mysql", "mysql"
-        data = capture("#{try_sudo} sh -c 'mysqldump -u#{config['database_user']} --host='#{config['database_host']}' --password='#{config['database_password']}' #{config['database_name']} | gzip -c > #{file}'")
-        puts data
-      when "pdo_pgsql", "pgsql"
-        data = capture("#{try_sudo} sh -c 'PGPASSWORD=\"#{config['database_password']}\" pg_dump -U #{config['database_user']} #{config['database_name']} -h#{config['database_host']} --clean | gzip -c > #{file}'")
-        puts data
-      end
+      p config
+
+    #  case config[application_env]['resources']['doctrine']['dbal']['connections']['default']['parameters.user']
+      data = capture("#{try_sudo} sh -c 'mysqldump -u#{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.user']} --host='#{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.host']}' --password='#{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.password']} #{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.dbname']} | gzip -c > #{file}'")
+      puts data
 
       FileUtils.mkdir_p("#{backup_path}")
 
@@ -43,15 +40,13 @@ namespace :database do
       filename  = "#{application}.local_dump.#{Time.now.utc.strftime("%Y%m%d%H%M%S")}.sql.gz"
       tmpfile   = "#{backup_path}/#{application}_dump_tmp.sql"
       file      = "#{backup_path}/#{filename}"
-      config    = load_database_config IO.read("#{app_config_path}/#{app_config_file}"), zend_env_local
+      config    = load_database_config IO.read("#{app_config_path}/#{app_db_config_file}"), application_env
       sqlfile   = "#{application}_dump.sql"
 
       FileUtils::mkdir_p("#{backup_path}")
       case config['database_driver']
       when "pdo_mysql", "mysql"
         `mysqldump -u#{config['database_user']} --password=\"#{config['database_password']}\" #{config['database_name']} > #{tmpfile}`
-      when "pdo_pgsql", "pgsql"
-        `PGPASSWORD=\"#{config['database_password']}\" pg_dump -U #{config['database_user']} #{config['database_name']} --clean > #{tmpfile}`
       end
 
       File.open(tmpfile, "r+") do |f|
@@ -77,7 +72,7 @@ namespace :database do
     task :to_local, :roles => :db, :only => { :primary => true } do
       env       = fetch(:deploy_env, "remote")
       filename  = "#{application}.#{env}_dump.latest.sql.gz"
-      config    = load_database_config IO.read("#{app_config_path}/#{app_config_file}"), zend_env_local
+      config    = load_database_config IO.read("#{app_config_path}/#{app_db_config_file}"), application_env
       sqlfile   = "#{application}_dump.sql"
 
       database.dump.remote
@@ -90,8 +85,6 @@ namespace :database do
       case config['database_driver']
       when "pdo_mysql", "mysql"
         `mysql -u#{config['database_user']} --password=\"#{config['database_password']}\" #{config['database_name']} < #{backup_path}/#{sqlfile}`
-      when "pdo_pgsql", "pgsql"
-        `PGPASSWORD=\"#{config['database_password']}\" psql -U #{config['database_user']} #{config['database_name']} < #{backup_path}/#{sqlfile}`
       end
       FileUtils.rm("#{backup_path}/#{sqlfile}")
     end
@@ -108,15 +101,12 @@ namespace :database do
       upload(file, "#{remote_tmp_dir}/#{filename}", :via => :scp)
       run "#{try_sudo} gunzip -c #{remote_tmp_dir}/#{filename} > #{remote_tmp_dir}/#{sqlfile}"
 
-      data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_config_file}")
+      data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_db_config_file}")
       config = load_database_config data, application_env
 
       case config['database_driver']
       when "pdo_mysql", "mysql"
         data = capture("#{try_sudo} mysql -u#{config['database_user']} --host='#{config['database_host']}' --password='#{config['database_password']}' #{config['database_name']} < #{remote_tmp_dir}/#{sqlfile}")
-        puts data
-      when "pdo_pgsql", "pgsql"
-        data = capture("#{try_sudo} PGPASSWORD=\"#{config['database_password']}\" psql -U #{config['database_user']} #{config['database_name']} -h#{config['database_host']} < #{remote_tmp_dir}/#{sqlfile}")
         puts data
       end
 

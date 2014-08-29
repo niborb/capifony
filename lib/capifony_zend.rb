@@ -45,6 +45,8 @@ module Capifony
         # Zend config file (parameters.(ini|yml|etc...)
         set :app_config_files, {app_path + '/application/configs/application.dist.ini' => app_path + '/application/configs/application.ini'}
 
+        set :app_db_config_file,  "application.ini"
+
         # Whether to use composer to install vendors.
         # If set to false, it will use the bin/vendors script
         set :use_composer,          true
@@ -113,6 +115,17 @@ module Capifony
           read_parameters(data)['parameters']
         end
 
+        def read_parameters(data)
+          if '.ini' === File.extname(app_db_config_file) then
+            if File.readable?(data) then
+              puts "\t reading file #{app_db_config_file}".green
+              IniFile::load(data)
+            else
+              puts "\t Could not read file #{app_db_config_file}".red
+              IniFile.new(data)
+            end
+          end
+        end
 
         def remote_file_exists?(full_path)
           'true' == capture("if [ -e #{full_path} ]; then echo 'true'; fi").strip
