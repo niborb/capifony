@@ -1,5 +1,5 @@
 namespace :zend do
-  namespace :doctrine do
+  namespace :doctrine1 do
     namespace :cache do
       desc "Clears all metadata cache for a entity manager"
       task :clear_metadata, :roles => :app, :except => { :no_release => true } do
