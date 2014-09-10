@@ -17,10 +17,11 @@ Gem::Specification.new do |spec|
   spec.bindir       = "bin"
   spec.executables << "capifony"
 
-  spec.add_dependency 'capistrano', ">= 2.13.5","<= 2.16.0"
+  spec.add_dependency 'capistrano', '2.15.4'
   spec.add_dependency 'colored', ">= 1.2.0"
   spec.add_dependency 'inifile', ">= 2.0.2"
-  spec.add_dependency 'capistrano-maintenance', '0.0.3'
+  spec.add_dependency 'capistrano-maintenance', '0.0.4'
+  spec.add_dependency 'capistrano-multistage', '0.0.4'
   spec.add_dependency 'ruby-progressbar', '1.4.1'
 
   spec.authors      = [ "Konstantin Kudryashov", "William Durand" ]

@@ -119,7 +119,7 @@ namespace :deploy do
     run "#{try_sudo} sh -c 'cd #{latest_release} && phpunit -c #{app_path} src'"
   end
 
-  desc "Runs the Zend Doctrine2 migrations"
+  desc "Runs the Zend Doctrine migrations"
   task :migrate, :roles => :app, :except => { :no_release => true }, :only => { :primary => true } do
     if model_manager == "doctrine2"
       zend.doctrine2.migrations.migrate

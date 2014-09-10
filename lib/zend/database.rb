@@ -6,18 +6,12 @@ namespace :database do
     desc "Dumps remote database"
     task :remote, :roles => :db, :only => { :primary => true } do
       env       = fetch(:deploy_env, "remote")
-      filename  = "#{application}.#{env}_dump.#{Time.now.utc.strftime("%Y%m%d%H%M%S")}.sql.gz"
+      filename  = "#{application}.#{env}_dump.#{release_name}.sql.gz"
       file      = "#{remote_tmp_dir}/#{filename}"
       sqlfile   = "#{application}_dump.sql"
-      config    = ""
-
-      data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_db_config_file}")
-      config = load_database_config data, application_env
-
-      p config
-
-    #  case config[application_env]['resources']['doctrine']['dbal']['connections']['default']['parameters.user']
-      data = capture("#{try_sudo} sh -c 'mysqldump -u#{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.user']} --host='#{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.host']}' --password='#{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.password']} #{config[application_env]['resources.doctrine.dbal.connections.default.parameters.user.dbname']} | gzip -c > #{file}'")
+      config = load_database_config
+      
+      data = capture("#{try_sudo} sh -c 'mysqldump -u#{config[:username]} --host='#{config[:hostname]}' --password='#{config[:password]}' #{config[:database]} | gzip -c > #{file}'")
       puts data
 
       FileUtils.mkdir_p("#{backup_path}")
@@ -37,10 +31,10 @@ namespace :database do
 
     desc "Dumps local database"
     task :local do
-      filename  = "#{application}.local_dump.#{Time.now.utc.strftime("%Y%m%d%H%M%S")}.sql.gz"
+      filename  = "#{application}.local_dump.#{release_name}.sql.gz"
       tmpfile   = "#{backup_path}/#{application}_dump_tmp.sql"
       file      = "#{backup_path}/#{filename}"
-      config    = load_database_config IO.read("#{app_config_path}/#{app_db_config_file}"), application_env
+      config    = load_database_config
       sqlfile   = "#{application}_dump.sql"
 
       FileUtils::mkdir_p("#{backup_path}")

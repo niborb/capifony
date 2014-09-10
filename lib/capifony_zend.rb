@@ -30,7 +30,10 @@ module Capifony
         set :web_path,              "public"
 
         # Zend console bin
-        set :zend_console,       app_path + "/scripts/console.php"
+        set :zend_console,          app_path + "/scripts/console.php"
+        
+        # Doctrine console bin
+        set :doctrine_console,      zend_console
 
         # Zend log path
         set :log_path,              app_path + "/var/logs"
@@ -44,16 +47,18 @@ module Capifony
         set :app_config_path,       app_path + "/application/configs"
 
         # Zend config file (parameters.(ini|yml|etc...)
-        set :app_config_files, {app_path + '/application/configs/application.dist.ini' => app_path + '/application/configs/application.ini'}
+        set :app_config_files,      {
+          app_path + '/application/configs/application.dist.ini' => app_path + '/application/configs/application.ini'
+        }
 
-        set :app_db_config_file,  "application.ini"
+        set :app_db_config_file,    "application.ini"
 
         # Whether to use composer to install vendors.
         # If set to false, it will use the bin/vendors script
         set :use_composer,          true
 
         # Whether to use composer to install vendors to a local temp directory.
-        set :use_composer_tmp,     false
+        set :use_composer_tmp,      false
 
         # Path to composer binary
         # If set to false, Capifony will download/install composer
@@ -112,19 +117,36 @@ module Capifony
         # Use it carefully, really!
         set :interactive_mode,      true
 
-        def load_database_config(data, env)
-          read_parameters(data)['parameters']
-        end
-
-        def read_parameters(data)
-          if '.ini' === File.extname(app_db_config_file) then
-            if File.readable?(data) then
-              puts "\t reading file #{app_db_config_file}".green
-              IniFile::load(data)
+        def load_database_config()
+          data = capture("#{try_sudo} cat #{current_path}/#{app_db_config_file}")
+          environment = "#{application_env} : application"
+          
+          if '.ini' === File.extname("#{current_path}/#{app_db_config_file}") then
+            if File.readable?("#{current_path}/#{app_db_config_file}") then
+              puts "\t reading file #{current_path}/#{app_db_config_file}".green
+              ini = IniFile::load("#{current_path}/#{app_db_config_file}")
             else
-              puts "\t Could not read file #{app_db_config_file}".red
-              IniFile.new(data)
+              puts "\t processing output from file #{current_path}/#{app_db_config_file}".green
+              ini = IniFile.new(:content => data, :comment => ';')
             end
+            
+            if model_manager == "doctrine2"
+              config = {
+                :hostname => "#{ini[environment]['resources.doctrine.dbal.connections.default.parameters.host']}",
+                :username => "#{ini[environment]['resources.doctrine.dbal.connections.default.parameters.user']}",
+                :password => "#{ini[environment]['resources.doctrine.dbal.connections.default.parameters.password']}",
+                :database => "#{ini[environment]['resources.doctrine.dbal.connections.default.parameters.dbname']}"
+              }
+            elsif model_manager == "doctrine1"
+              config = {
+                :hostname => "#{ini[environment]['resources.doctrine.database.hostname']}",
+                :username => "#{ini[environment]['resources.doctrine.database.username']}",
+                :password => "#{ini[environment]['resources.doctrine.database.password']}",
+                :database => "#{ini[environment]['resources.doctrine.database.dbName']}"
+              }
+            end
+            
+            return config
           end
         end
 
