@@ -2,110 +2,115 @@ require 'fileutils'
 require 'zlib'
 
 namespace :database do
-  namespace :dump do
-    desc "Dumps remote database"
+  namespace :migrate do
+    desc "Migrates a remote database"
     task :remote, :roles => :db, :only => { :primary => true } do
-      env       = fetch(:deploy_env, "remote")
-      filename  = "#{application}.#{env}_dump.#{release_name}.sql.gz"
-      file      = "#{remote_tmp_dir}/#{filename}"
-      sqlfile   = "#{application}_dump.sql"
-      config = load_database_config
+      transaction do
+        remote.dump
+        deploy.migrate
+      end
+    end
+  end
+  
+  namespace :remote do
+    
+    desc "Restores the remote database from the latest dump"
+    task :restore, :roles => :db, :only => { :primary => true } do
+      config      = load_database_config
+      filename    = "#{application}.remote.#{config[:database]}.#{application_env}.latest.sql.gz"
+      local_file  = "#{backup_path}/#{filename}"
+      remote_file = "#{remote_tmp_dir}/#{filename}"
       
-      data = capture("#{try_sudo} sh -c 'mysqldump -u#{config[:username]} --host='#{config[:hostname]}' --password='#{config[:password]}' #{config[:database]} | gzip -c > #{file}'")
+      if !interactive_mode || Capistrano::CLI.ui.agree("Restore the remote #{application_env} database from dump file: #{local_file}? (y/N)")
+        capifony_progress_start
+        put(local_file, remote_file, :via => :scp) do |channel, name, sent, total|
+          capifony_progress_update(sent, total)
+        end
+        
+        data = capture("#{try_sudo} sh -c 'gunzip -dc < #{remote_file} | mysql -u#{config[:username]} --host=\"#{config[:hostname]}\" --password=\"#{config[:password]}\" #{config[:database]}'")
+        puts data
+  
+        run "#{try_sudo} rm -f #{remote_file}"
+      end
+  end
+    
+    desc "Dumps remote database"
+    task :dump, :roles => :db, :only => { :primary => true } do
+      config      = load_database_config
+      filename    = "#{application}.remote.#{config[:database]}.#{application_env}.#{release_name}.sql.gz"
+      remote_file = "#{remote_tmp_dir}/#{filename}"
+      
+      data = capture("#{try_sudo} sh -c '#{remote_mysqldump_bin} -u#{config[:username]} --host=\"#{config[:hostname]}\" --password=\"#{config[:password]}\" #{config[:database]} | gzip -c > #{remote_file}'")
       puts data
 
       FileUtils.mkdir_p("#{backup_path}")
 
       capifony_progress_start
-      get(file, "#{backup_path}/#{filename}", :via => :scp) do |channel, name, sent, total|
+      get(remote_file, "#{backup_path}/#{filename}", :via => :scp) do |channel, name, sent, total|
         capifony_progress_update(sent, total)
       end
 
       begin
-        FileUtils.ln_sf(filename, "#{backup_path}/#{application}.#{env}_dump.latest.sql.gz")
+        FileUtils.ln_sf(filename, "#{backup_path}/#{application}.remote.#{config[:database]}.#{application_env}.latest.sql.gz")
       rescue Exception # fallback for file systems that don't support symlinks
-        FileUtils.cp_r("#{backup_path}/#{filename}", "#{backup_path}/#{application}.#{env}_dump.latest.sql.gz")
+        FileUtils.cp_r("#{backup_path}/#{filename}", "#{backup_path}/#{application}.remote.#{config[:database]}.#{application_env}.latest.sql.gz")
       end
-      run "#{try_sudo} rm -f #{file}"
+      run "#{try_sudo} rm -f #{remote_file}"
     end
-
+  
+    desc "Dumps remote database, downloads it to local, and populates here"
+    task :copy_to_local, :roles => :db, :only => { :primary => true } do
+      database.remote.dump
+      remote_config = load_database_config
+      local_config  = load_database_config('development')
+      filename    = "#{application}.remote.#{remote_config[:database]}.#{application_env}.latest.sql.gz"
+      local_file  = "#{backup_path}/#{filename}"
+        
+      cmd = "gunzip -dc < #{local_file} | #{local_mysql_bin} -u#{local_config[:username]} --password=\"#{local_config[:password]}\" #{local_config[:database]}"
+      p "executing command: #{cmd}"
+      `#{cmd}`
+    end
+  end
+    
+  namespace :local do
     desc "Dumps local database"
-    task :local do
-      filename  = "#{application}.local_dump.#{release_name}.sql.gz"
-      tmpfile   = "#{backup_path}/#{application}_dump_tmp.sql"
-      file      = "#{backup_path}/#{filename}"
-      config    = load_database_config
-      sqlfile   = "#{application}_dump.sql"
-
+    task :dump do
+      config      = load_database_config('development')
+      filename    = "#{application}.local.#{config[:database]}.#{application_env}.#{release_name}.sql.gz"
+      local_file  = "#{backup_path}/#{filename}"
+      
       FileUtils::mkdir_p("#{backup_path}")
-      case config['database_driver']
-      when "pdo_mysql", "mysql"
-        `mysqldump -u#{config['database_user']} --password=\"#{config['database_password']}\" #{config['database_name']} > #{tmpfile}`
-      end
-
-      File.open(tmpfile, "r+") do |f|
-        gz = Zlib::GzipWriter.open(file)
-        while (line = f.gets)
-          gz << line
-        end
-        gz.flush
-        gz.close
-      end
+      
+      cmd = "#{local_mysqldump_bin} -S #{local_mysql_socket} -u#{config[:username]} --password='#{config[:password]}' #{config[:database]} | gzip -c > #{local_file}"
+      p "executing command: #{cmd}"
+      `#{cmd}`
 
       begin
-        FileUtils.ln_sf(filename, "#{backup_path}/#{application}.local_dump.latest.sql.gz")
+        FileUtils.ln_sf(filename, "#{backup_path}/#{application}.local.#{config[:database]}.#{application_env}.latest.sql.gz")
       rescue Exception # fallback for file systems that don't support symlinks
-        FileUtils.cp_r("#{backup_path}/#{filename}", "#{backup_path}/#{application}.local_dump.latest.sql.gz")
+        FileUtils.cp_r("#{backup_path}/#{filename}", "#{backup_path}/#{application}.local.#{config[:database]}.#{application_env}.latest.sql.gz")
       end
-      FileUtils.rm(tmpfile)
     end
-  end
-
-  namespace :copy do
-    desc "Dumps remote database, downloads it to local, and populates here"
-    task :to_local, :roles => :db, :only => { :primary => true } do
-      env       = fetch(:deploy_env, "remote")
-      filename  = "#{application}.#{env}_dump.latest.sql.gz"
-      config    = load_database_config IO.read("#{app_config_path}/#{app_db_config_file}"), application_env
-      sqlfile   = "#{application}_dump.sql"
-
-      database.dump.remote
-
-      f = File.new("#{backup_path}/#{sqlfile}", "a+")
-      gz = Zlib::GzipReader.new(File.open("#{backup_path}/#{filename}", "r"))
-      f << gz.read
-      f.close
-
-      case config['database_driver']
-      when "pdo_mysql", "mysql"
-        `mysql -u#{config['database_user']} --password=\"#{config['database_password']}\" #{config['database_name']} < #{backup_path}/#{sqlfile}`
-      end
-      FileUtils.rm("#{backup_path}/#{sqlfile}")
-    end
-
+    
     desc "Dumps local database, loads it to remote, and populates there"
-    task :to_remote, :roles => :db, :only => { :primary => true } do
-      filename  = "#{application}.local_dump.latest.sql.gz"
-      file      = "#{backup_path}/#{filename}"
-      sqlfile   = "#{application}_dump.sql"
-      config    = ""
+    task :copy_to_remote, :roles => :db, :only => { :primary => true } do
+      database.local.dump
+      local_config = load_database_config('development')
+      remote_config = load_database_config
+      filename    = "#{application}.local.#{local_config[:database]}.#{application_env}.#{release_name}.sql.gz"
+      local_file  = "#{backup_path}/#{filename}"
+      remote_file = "#{remote_tmp_dir}/#{filename}"
 
-      database.dump.local
-
-      upload(file, "#{remote_tmp_dir}/#{filename}", :via => :scp)
-      run "#{try_sudo} gunzip -c #{remote_tmp_dir}/#{filename} > #{remote_tmp_dir}/#{sqlfile}"
-
-      data = capture("#{try_sudo} cat #{current_path}/#{app_config_path}/#{app_db_config_file}")
-      config = load_database_config data, application_env
-
-      case config['database_driver']
-      when "pdo_mysql", "mysql"
-        data = capture("#{try_sudo} mysql -u#{config['database_user']} --host='#{config['database_host']}' --password='#{config['database_password']}' #{config['database_name']} < #{remote_tmp_dir}/#{sqlfile}")
-        puts data
+      capifony_progress_start
+      put(local_file, remote_file, :via => :scp) do |channel, name, sent, total|
+        capifony_progress_update(sent, total)
       end
 
-      run "#{try_sudo} rm -f #{remote_tmp_dir}/#{filename}"
-      run "#{try_sudo} rm -f #{remote_tmp_dir}/#{sqlfile}"
+      data = capture("#{try_sudo} sh -c 'gunzip -dc < #{remote_file} | #{remote_mysql_bin} -u#{remote_config[:username]} --host=\"#{remote_config[:hostname]}\" --password=\"#{remote_config[:password]}\" #{remote_config[:database]}'")
+      puts data
+
+      run "#{try_sudo} rm -f #{remote_file}"
     end
   end
+  
 end

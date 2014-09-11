@@ -116,10 +116,21 @@ module Capifony
         # If set to false, it will never ask for confirmations (migrations task for instance)
         # Use it carefully, really!
         set :interactive_mode,      true
+        
+        # mysql binaries
+        set :local_mysql_bin,       "mysql"
+        set :local_mysqldump_bin,   "mysqldump"
+        set :local_mysql_socket,    "/usr/local/zend/mysql/tmp/mysql.sock"
+        set :remote_mysql_bin,      "mysql"
+        set :remote_mysqldump_bin,  "mysqldump"
 
-        def load_database_config()
+        def load_database_config(env = nil)
+          if (!env)
+            env = application_env
+          end
+          
           data = capture("#{try_sudo} cat #{current_path}/#{app_db_config_file}")
-          environment = "#{application_env} : application"
+          environment = "#{env} : application"
           
           if '.ini' === File.extname("#{current_path}/#{app_db_config_file}") then
             if File.readable?("#{current_path}/#{app_db_config_file}") then
