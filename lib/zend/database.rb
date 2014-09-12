@@ -2,9 +2,10 @@ require 'fileutils'
 require 'zlib'
 
 namespace :database do
-  namespace :migrate do
+  
+  namespace :remote do
     desc "Migrates a remote database"
-    task :remote, :roles => :db, :only => { :primary => true } do
+    task :migrate, :roles => :db, :only => { :primary => true } do
       database.remote.dump
       
       transaction do
@@ -15,9 +16,6 @@ namespace :database do
         end
       end
     end
-  end
-  
-  namespace :remote do
     
     desc "Restores the remote database from the latest dump"
     task :restore, :roles => :db, :only => { :primary => true } do
@@ -37,7 +35,7 @@ namespace :database do
   
         run "#{try_sudo} rm -f #{remote_file}"
       end
-  end
+    end
     
     desc "Dumps remote database"
     task :dump, :roles => :db, :only => { :primary => true } do
