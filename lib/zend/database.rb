@@ -117,17 +117,16 @@ namespace :database do
       run "#{try_sudo} rm -f #{remote_file}"
     end
     
-    desc "Clean-up local database dumps"
+    desc "Clean-up database dumps"
     task :cleanup, :roles => :db, :only => { :primary => true } do
       count = fetch(:keep_releases, 5).to_i
       
-      cmd = "ls -1dt #{backup_path}/#{application}.remote.2* | tail -n +#{count + 1} | xargs rm -rf"
+      config = load_database_config
+      
+      cmd = "ls -1dt #{application}.remote.#{config[:database]}.#{application_env}.2* | tail -n +#{count + 1} | xargs rm -rf"
       p "executing command: #{cmd}"
       `#{cmd}`
       
-      cmd = "ls -1dt #{backup_path}/#{application}.local.2* | tail -n +#{count + 1} | xargs rm -rf"
-      p "executing command: #{cmd}"
-      `#{cmd}`
     end
     
   end
