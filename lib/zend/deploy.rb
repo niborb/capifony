@@ -119,15 +119,6 @@ namespace :deploy do
     run "#{try_sudo} sh -c 'cd #{latest_release} && phpunit -c #{app_path} src'"
   end
 
-  desc "Runs the Zend Doctrine migrations"
-  task :migrate, :roles => :app, :except => { :no_release => true }, :only => { :primary => true } do
-    if model_manager == "doctrine2"
-      zend.doctrine2.migrations.migrate
-    elsif model_manager == "doctrine1"
-      zend.doctrine1.migrations.migrate
-    end
-  end
-
   desc "Drops :deploy_to directory"
   task :drop do
     if Capistrano::CLI.ui.ask("Are you sure remove #{deploy_to} (y/n)") == 'y'

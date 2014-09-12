@@ -5,9 +5,14 @@ namespace :database do
   namespace :migrate do
     desc "Migrates a remote database"
     task :remote, :roles => :db, :only => { :primary => true } do
+      database.remote.dump
+      
       transaction do
-        remote.dump
-        deploy.migrate
+        if model_manager == "doctrine2"
+          zend.doctrine2.migrations.migrate
+        elsif model_manager == "doctrine1"
+          zend.doctrine1.migrations.migrate
+        end
       end
     end
   end
@@ -23,11 +28,11 @@ namespace :database do
       
       if !interactive_mode || Capistrano::CLI.ui.agree("Restore the remote #{application_env} database from dump file: #{local_file}? (y/N)")
         capifony_progress_start
-        put(local_file, remote_file, :via => :scp) do |channel, name, sent, total|
+        put(File.read(local_file), remote_file, :via => :scp) do |channel, name, sent, total|
           capifony_progress_update(sent, total)
         end
         
-        data = capture("#{try_sudo} sh -c 'gunzip -dc < #{remote_file} | mysql -u#{config[:username]} --host=\"#{config[:hostname]}\" --password=\"#{config[:password]}\" #{config[:database]}'")
+        data = capture("#{try_sudo} sh -c 'gunzip -dc < #{remote_file} | mysql --max_allowed_packet=64M -u#{config[:username]} --host=\"#{config[:hostname]}\" --password=\"#{config[:password]}\" #{config[:database]}'")
         puts data
   
         run "#{try_sudo} rm -f #{remote_file}"
@@ -40,7 +45,7 @@ namespace :database do
       filename    = "#{application}.remote.#{config[:database]}.#{application_env}.#{release_name}.sql.gz"
       remote_file = "#{remote_tmp_dir}/#{filename}"
       
-      data = capture("#{try_sudo} sh -c '#{remote_mysqldump_bin} -u#{config[:username]} --host=\"#{config[:hostname]}\" --password=\"#{config[:password]}\" #{config[:database]} | gzip -c > #{remote_file}'")
+      data = capture("#{try_sudo} sh -c '#{remote_mysqldump_bin} --max_allowed_packet=64M -u#{config[:username]} --host=\"#{config[:hostname]}\" --password=\"#{config[:password]}\" #{config[:database]} | gzip -c > #{remote_file}'")
       puts data
 
       FileUtils.mkdir_p("#{backup_path}")
@@ -106,7 +111,7 @@ namespace :database do
         capifony_progress_update(sent, total)
       end
 
-      data = capture("#{try_sudo} sh -c 'gunzip -dc < #{remote_file} | #{remote_mysql_bin} -u#{remote_config[:username]} --host=\"#{remote_config[:hostname]}\" --password=\"#{remote_config[:password]}\" #{remote_config[:database]}'")
+      data = capture("#{try_sudo} sh -c 'gunzip -dc < #{remote_file} | #{remote_mysql_bin} --max_allowed_packet=64M -u#{remote_config[:username]} --host=\"#{remote_config[:hostname]}\" --password=\"#{remote_config[:password]}\" #{remote_config[:database]}'")
       puts data
 
       run "#{try_sudo} rm -f #{remote_file}"

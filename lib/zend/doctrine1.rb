@@ -9,7 +9,7 @@ namespace :zend do
         }
 
         if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to migrate #{application_env}'s database? (y/N)")
-          run "#{try_sudo} sh -c ' cd #{latest_release} && APPLICATION_ENV=#{application_env}  #{php_bin} #{doctrine_console} migrate #{console_options}'", :once => true
+          run "#{try_sudo} sh -c 'cd #{latest_release} && APPLICATION_ENV=#{application_env}  #{php_bin} #{doctrine_console} migrate #{console_options}'", :once => true
         end
       end
     end
