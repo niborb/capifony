@@ -15,6 +15,8 @@ namespace :database do
           zend.doctrine1.migrations.migrate
         end
       end
+      
+      local.cleanup
     end
     
     desc "Restores the remote database from the latest dump"
@@ -116,4 +118,16 @@ namespace :database do
     end
   end
   
+  desc "Clean-up local database dumps"
+  task :cleanup, :roles => :db, :only => { :primary => true } do
+    count = fetch(:keep_releases, 5).to_i
+    
+    cmd = "ls -1dt #{backup_path}/#{application}.remote.2* | tail -n +#{count + 1} | xargs rm -rf"
+    p "executing command: #{cmd}"
+    `#{cmd}`
+    
+    cmd = "ls -1dt #{backup_path}/#{application}.local.2* | tail -n +#{count + 1} | xargs rm -rf"
+    p "executing command: #{cmd}"
+    `#{cmd}`
+  end
 end
