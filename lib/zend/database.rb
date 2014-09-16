@@ -123,7 +123,7 @@ namespace :database do
       
       config = load_database_config
       
-      cmd = "ls -1dt #{application}.remote.#{config[:database]}.#{application_env}.2* | tail -n +#{count + 1} | xargs rm -rf"
+      cmd = "ls -1dt #{backup_path}/#{application}.remote.#{config[:database]}.#{application_env}.2* | tail -n +#{count + 1} | xargs rm -rf"
       p "executing command: #{cmd}"
       `#{cmd}`
       
